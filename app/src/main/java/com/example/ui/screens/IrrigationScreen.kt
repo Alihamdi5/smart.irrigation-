@@ -69,7 +69,7 @@ fun IrrigationScreen(
 
     val bannerText = when {
         criticalFarms > 0 -> "هشدار: $criticalFarms مزرعه در وضعیت بحرانی هستند — آبیاری را فوراً آغاز کنید"
-        warningFarms > 0 -> "توجه: $warningFarms مزرعه نزدیک به آستانه بحرانی تبخیر هستند"
+        warningFarms > 0 -> "توجه: $warningFarms مزرعه نزدیک به آستانه بحرانی تبخیر آب هستند"
         else -> "وضعیت تمام مزارع مناسب و پایدار است"
     }
 
@@ -142,27 +142,9 @@ fun IrrigationScreen(
                                 color = Color.White,
                                 textAlign = TextAlign.Right
                             )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.End),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "علی حمدی",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = primaryGoldWheat,
-                                    fontWeight = FontWeight.Bold,
-                                    textAlign = TextAlign.Right
-                                )
-                                Text(
-                                    text = "تهیه کننده:",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = Color.LightGray,
-                                    textAlign = TextAlign.Right
-                                )
-                            }
+                            Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "پایش علمی تبخیر و تعرق مزارع نیشکر",
+                                text = "پایش علمی تبخیر آب مزارع نیشکر",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = leafGreen,
                                 textAlign = TextAlign.Right
@@ -219,7 +201,7 @@ fun IrrigationScreen(
                 val tabs = listOf(
                     Triple(0, "داشبورد پایش", Icons.Default.Dashboard),
                     Triple(1, "مدیریت مزارع", Icons.Default.Agriculture),
-                    Triple(2, "ثبت تبخیر روزانه", Icons.Default.WaterDrop)
+                    Triple(2, "ثبت تبخیر آب روزانه", Icons.Default.WaterDrop)
                 )
 
                 tabs.forEach { (index, title, icon) ->
@@ -361,7 +343,7 @@ fun DashboardView(
                             .padding(12.dp),
                         horizontalAlignment = Alignment.End
                     ) {
-                        Text("کل تبخیر تجمعی", fontSize = 11.sp, color = Color.LightGray)
+                        Text("کل تبخیر آب تجمعی", fontSize = 11.sp, color = Color.LightGray)
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = String.format(Locale.getDefault(), "%.1f میلی‌متر", totalCumEvap),
@@ -525,7 +507,7 @@ fun FarmOverviewCard(farm: Farm, metrics: FarmMetrics) {
                         color = Color.White
                     )
                     Text(
-                        text = "مساحت قطعه: ${farm.area} هکتار",
+                        text = "هکتار آبیاری: ${farm.area} هکتار",
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.LightGray
                     )
@@ -572,7 +554,7 @@ fun FarmOverviewCard(farm: Farm, metrics: FarmMetrics) {
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
                     Text(
-                        text = "تبخیر تجمعی: ${metrics.cumulativeEvap} میلی‌متر",
+                        text = "تبخیر آب تجمعی: ${metrics.cumulativeEvap} میلی‌متر",
                         color = Color.White,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold
@@ -721,7 +703,7 @@ fun FarmsManagementView(
                                 .testTag("farm_area_input"),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, textAlign = TextAlign.Center),
-                            placeholder = { Text("مساحت (هکتار)", color = Color.Gray, fontSize = 11.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
+                            placeholder = { Text("هکتار آبیاری", color = Color.Gray, fontSize = 11.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedTextColor = Color.White,
                                 focusedBorderColor = leafGreen,
@@ -920,7 +902,7 @@ fun FarmsManagementView(
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = "${farm.area} هکتار  |  هدف: ${farm.target_cpe} میلی‌متر  |  آبیاری: ${farm.last_irrigation}",
+                                text = "آبیاری: ${farm.area} هکتار  |  هدف: ${farm.target_cpe} میلی‌متر  |  تاریخ: ${farm.last_irrigation}",
                                 color = Color.LightGray,
                                 fontSize = 11.sp
                             )
@@ -981,7 +963,7 @@ fun EvaporationManagementView(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        text = if (editingId == 0) "ثبت میزان تبخیر روزانه" else "ویرایش مقدار تبخیر ثبت‌شده",
+                        text = if (editingId == 0) "ثبت میزان تبخیر آب روزانه" else "ویرایش مقدار تبخیر آب ثبت‌شده",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
@@ -995,7 +977,7 @@ fun EvaporationManagementView(
                             .fillMaxWidth()
                             .testTag("evap_date_input"),
                         textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, textAlign = TextAlign.Center),
-                        label = { Text("تاریخ ثبت تبخیر (مثال: YYYY/MM/DD)", color = Color.LightGray, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Right) },
+                        label = { Text("تاریخ ثبت تبخیر آب (مثال: YYYY/MM/DD)", color = Color.LightGray, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Right) },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = Color.White,
                             focusedBorderColor = leafGreen,
@@ -1012,7 +994,7 @@ fun EvaporationManagementView(
                             .testTag("evap_value_input"),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, textAlign = TextAlign.Center),
-                        label = { Text("میزان تبخیر روزانه (میلی‌متر)", color = Color.LightGray, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Right) },
+                        label = { Text("میزان تبخیر آب روزانه (میلی‌متر)", color = Color.LightGray, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Right) },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = Color.White,
                             focusedBorderColor = leafGreen,
@@ -1041,7 +1023,7 @@ fun EvaporationManagementView(
                             onClick = {
                                 val evapDouble = inEvap.toDoubleOrNull()
                                 if (evapDouble == null) {
-                                    onToast("خطا: مقدار تبخیر ارسالی باید عددی معتبر باشد.")
+                                    onToast("خطا: مقدار تبخیر آب ارسالی باید عددی معتبر باشد.")
                                 } else {
                                     viewModel.saveEvaporation(editingId, inDate, evapDouble) { resultMsg ->
                                         onToast(resultMsg)
@@ -1058,7 +1040,7 @@ fun EvaporationManagementView(
                             shape = RoundedCornerShape(8.dp)
                         ) {
                             Text(
-                                text = if (editingId == 0) "ثبت و تایید تبخیر" else "بروزرسانی رکورد",
+                                text = if (editingId == 0) "ثبت و تایید تبخیر آب" else "بروزرسانی رکورد",
                                 color = Color.Black,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.ExtraBold
@@ -1091,7 +1073,7 @@ fun EvaporationManagementView(
         // Section Title: Saved Readings
         item {
             Text(
-                text = "تاریخچه رکوردهای تبخیر و تعرق ثبت‌شده",
+                text = "تاریخچه رکوردهای تبخیر آب ثبت‌شده",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,

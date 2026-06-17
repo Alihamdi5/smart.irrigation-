@@ -180,18 +180,18 @@ class IrrigationViewModel(private val repository: IrrigationRepository) : ViewMo
                 if (existingByDate != null) {
                     // Update the existing record according to Kivy save logic
                     repository.updateEvaporation(existingByDate.copy(evap = evapVal))
-                    onComplete("رکورد تبخیر این تاریخ موجود بود و مقدار آن بروزرسانی گردید.")
+                    onComplete("رکورد تبخیر آب این تاریخ موجود بود و مقدار آن بروزرسانی گردید.")
                 } else {
                     repository.insertEvaporation(Evaporation(date = cleanDate, evap = evapVal))
-                    onComplete("رکورد روزانه تبخیر افزوده شد.")
+                    onComplete("رکورد روزانه تبخیر آب افزوده شد.")
                 }
             } else {
                 val currentRecord = repository.getEvaporationByDate(cleanDate)
                 if (currentRecord != null && currentRecord.id != id) {
-                    onComplete("خطا: قبلاً برای این تاریخ تبخیر ثبت شده است.")
+                    onComplete("خطا: قبلاً برای این تاریخ تبخیر آب ثبت شده است.")
                 } else {
                     repository.insertEvaporation(Evaporation(id = id, date = cleanDate, evap = evapVal))
-                    onComplete("رکورد تبخیر بروزرسانی شد.")
+                    onComplete("رکورد تبخیر آب بروزرسانی شد.")
                 }
             }
         }
@@ -200,7 +200,7 @@ class IrrigationViewModel(private val repository: IrrigationRepository) : ViewMo
     fun deleteEvaporation(evapId: Int, onComplete: (String) -> Unit) {
         viewModelScope.launch {
             repository.deleteEvaporationById(evapId)
-            onComplete("رکورد تبخیر حذف شد.")
+            onComplete("رکورد تبخیر آب حذف شد.")
         }
     }
 }
