@@ -29,7 +29,7 @@ android {
             keyPassword = System.getenv("KEY_PASSWORD")
         }
 
-        debug {
+        create("debug") {
             storeFile = file("${System.getProperty("user.home")}/.android/debug.keystore")
             storePassword = "android"
             keyAlias = "androiddebugkey"
