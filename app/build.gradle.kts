@@ -8,7 +8,7 @@ plugins {
 
 android {
     namespace = "com.example"
-    compileSdk = 36   // یا 36 + minorApiLevel اگر نیاز باشد
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.aistudio.irrigation.vbtpwy"
@@ -66,7 +66,6 @@ android {
     }
 }
 
-// Secrets Plugin Configuration
 secrets {
     propertiesFileName = ".env"
     defaultPropertiesFileName = ".env.example"
