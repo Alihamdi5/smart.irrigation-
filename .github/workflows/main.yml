@@ -22,6 +22,11 @@ jobs:
           java-version: '17'
           cache: 'gradle'
 
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.12'
+
       - name: Create local .env file
         run: |
           if [ -f .env.example ]; then
@@ -30,8 +35,5 @@ jobs:
             echo "GEMINI_API_KEY=dummy_val" > .env
           fi
 
-      - name: Grant Execute Permission to Gradlew
-        run: chmod +x gradlew
-
       - name: Build Debug APK and Run Tests
-        run: ./gradlew assembleDebug testDebugUnitTest --stacktrace --no-daemon
+        run: gradle assembleDebug testDebugUnitTest --stacktrace --no-daemon
