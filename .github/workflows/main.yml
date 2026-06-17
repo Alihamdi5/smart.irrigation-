@@ -1,0 +1,37 @@
+name: Android CI
+
+on:
+  push:
+    branches: [ "main", "master", "develop" ]
+  pull_request:
+    branches: [ "main", "master", "develop" ]
+
+jobs:
+  build:
+    name: Build and Test App
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Create local .env file
+        run: |
+          if [ -f .env.example ]; then
+            cp .env.example .env
+          else
+            echo "GEMINI_API_KEY=dummy_val" > .env
+          fi
+
+      - name: Grant Execute Permission to Gradlew
+        run: chmod +x gradlew
+
+      - name: Build Debug APK and Run Tests
+        run: ./gradlew assembleDebug testDebugUnitTest --stacktrace --no-daemon
