@@ -638,19 +638,53 @@ fun FarmsManagementView(
                     .fillMaxWidth()
                     .testTag("farm_form_card"),
                 colors = CardDefaults.cardColors(containerColor = Color(0xFF142622)),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(20.dp),
+                border = BorderStroke(1.dp, Color(0xFF23443B))
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier.padding(18.dp),
                     horizontalAlignment = Alignment.End,
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    Text(
-                        text = if (selectedFarmId == 0) "ثبت مزرعه نیشکر جدید" else "ویرایش اطلاعات مزرعه نیشکر",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Small state modifier badge in Persian
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(if (selectedFarmId == 0) leafGreen.copy(alpha = 0.15f) else sunflowerGold.copy(alpha = 0.15f))
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = if (selectedFarmId == 0) "مزرعه جدید" else "در حال ویرایش",
+                                color = if (selectedFarmId == 0) leafGreen else sunflowerGold,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        // Title with icon
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = if (selectedFarmId == 0) "تعریف مزرعه نیشکر" else "ویرایش مـزرعـه",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                            Icon(
+                                imageVector = if (selectedFarmId == 0) Icons.Default.Agriculture else Icons.Default.Edit,
+                                contentDescription = "Farm Header Icon",
+                                tint = leafGreen,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
 
                     // Farm Name Input (Persian alignment hint)
                     OutlinedTextField(
@@ -669,20 +703,28 @@ fun FarmsManagementView(
                             focusedTextColor = Color.White,
                             focusedBorderColor = leafGreen,
                             unfocusedBorderColor = Color.DarkGray
-                        )
+                        ),
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Badge,
+                                contentDescription = "Name icon",
+                                tint = leafGreen,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                     )
 
-                    // Hectares area & CPE limits row inputs
+                    // CPE limits & Date Row (Area limit input deleted as requested!)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        // CPE Input
+                        // CPE Input (Target limit)
                         OutlinedTextField(
                             value = inCpe,
                             onValueChange = { inCpe = it },
                             modifier = Modifier
-                                .weight(1.2f)
+                                .weight(1f)
                                 .testTag("farm_cpe_input"),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, textAlign = TextAlign.Center),
@@ -691,42 +733,41 @@ fun FarmsManagementView(
                                 focusedTextColor = Color.White,
                                 focusedBorderColor = leafGreen,
                                 unfocusedBorderColor = Color.DarkGray
-                            )
+                            ),
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.Adjust,
+                                    contentDescription = "Target CPE limit icon",
+                                    tint = leafGreen,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
                         )
 
-                        // Area Input (Hectares)
+                        // Last Irrigation date string
                         OutlinedTextField(
-                            value = inArea,
-                            onValueChange = { inArea = it },
+                            value = inLastIrrigation,
+                            onValueChange = { inLastIrrigation = it },
                             modifier = Modifier
-                                .weight(1f)
-                                .testTag("farm_area_input"),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                .weight(1.3f)
+                                .testTag("farm_last_irrigation_input"),
                             textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, textAlign = TextAlign.Center),
-                            placeholder = { Text("هکتار آبیاری", color = Color.Gray, fontSize = 11.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
+                            placeholder = { Text("تاریخ آخرین آبیاری", color = Color.Gray, fontSize = 11.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedTextColor = Color.White,
                                 focusedBorderColor = leafGreen,
                                 unfocusedBorderColor = Color.DarkGray
-                            )
+                            ),
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.CalendarToday,
+                                    contentDescription = "Date icon",
+                                    tint = leafGreen,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
                         )
                     }
-
-                    // Last Irrigation date string
-                    OutlinedTextField(
-                        value = inLastIrrigation,
-                        onValueChange = { inLastIrrigation = it },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("farm_last_irrigation_input"),
-                        textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, textAlign = TextAlign.Center),
-                        label = { Text("تاریخ آخرین آبیاری (مثال: YYYY/MM/DD)", color = Color.LightGray, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Right) },
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = Color.White,
-                            focusedBorderColor = leafGreen,
-                            unfocusedBorderColor = Color.DarkGray
-                        )
-                    )
 
                     // Control Buttons Block (Save / Restart / Delete / Reset Form)
                     Row(
@@ -737,17 +778,29 @@ fun FarmsManagementView(
                         OutlinedButton(
                             onClick = { clearForm() },
                             modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(8.dp),
+                            shape = RoundedCornerShape(10.dp),
                             border = BorderStroke(1.dp, Color.Gray),
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
                         ) {
-                            Text("پاک کردن", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Clear,
+                                    contentDescription = "Clear Form icon",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Text("انصراف", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
                         }
 
                         // Save Button (Submit added/edited farm)
                         Button(
                             onClick = {
-                                val areaParsed = inArea.toDoubleOrNull() ?: 0.0
+                                // Defaulting the internal area to 12.0 hectares if empty/new
+                                val areaParsed = inArea.toDoubleOrNull() ?: 12.0
                                 val cpeParsed = inCpe.toDoubleOrNull() ?: 0.0
                                 viewModel.saveFarm(selectedFarmId, inName, areaParsed, cpeParsed, inLastIrrigation) { errMsg ->
                                     onToast(errMsg)
@@ -760,14 +813,25 @@ fun FarmsManagementView(
                                 .weight(2f)
                                 .testTag("save_farm_button"),
                             colors = ButtonDefaults.buttonColors(containerColor = leafGreen),
-                            shape = RoundedCornerShape(8.dp)
+                            shape = RoundedCornerShape(10.dp)
                         ) {
-                            Text(
-                                text = if (selectedFarmId == 0) "ذخیره مزرعه" else "اعمال تغییرات",
-                                color = Color.Black,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.ExtraBold
-                            )
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = if (selectedFarmId == 0) Icons.Default.AddCircleOutline else Icons.Default.Check,
+                                    contentDescription = "Save Action icon",
+                                    tint = Color.Black,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = if (selectedFarmId == 0) "ذخیره مـزرعـه" else "ثبت تغییرات مـزرعـه",
+                                    color = Color.Black,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.ExtraBold
+                                )
+                            }
                         }
                     }
 
@@ -789,7 +853,7 @@ fun FarmsManagementView(
                                     .weight(1.2f)
                                     .testTag("restart_irrigation_button"),
                                 colors = ButtonDefaults.buttonColors(containerColor = sunflowerGold),
-                                shape = RoundedCornerShape(8.dp)
+                                shape = RoundedCornerShape(10.dp)
                             ) {
                                 Row(
                                     horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -812,9 +876,15 @@ fun FarmsManagementView(
                                     .weight(1f)
                                     .testTag("delete_farm_button"),
                                 colors = ButtonDefaults.buttonColors(containerColor = clayRed),
-                                shape = RoundedCornerShape(8.dp)
+                                shape = RoundedCornerShape(10.dp)
                             ) {
-                                Text("حذف مزرعه", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete icon", tint = Color.White, modifier = Modifier.size(14.dp))
+                                    Text("حذف مزرعه", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
                             }
                         }
                     }
