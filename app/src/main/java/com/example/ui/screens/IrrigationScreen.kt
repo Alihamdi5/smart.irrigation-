@@ -39,6 +39,11 @@ import com.example.ui.viewmodel.FarmMetrics
 import com.example.ui.viewmodel.IrrigationViewModel
 import com.example.util.JalaliCalendarHelper
 import java.util.*
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -62,6 +67,15 @@ fun IrrigationScreen(
 
     // Reactive calculations derived from farms state
     val farmMetrics = farms.map { it to viewModel.calculateMetrics(it) }
+        .sortedByDescending { pair ->
+            when (pair.second.status) {
+                "بحرانی" -> 4
+                "هشدار" -> 3
+                "ایمن" -> 2
+                "بدون هدف" -> 1
+                else -> 0
+            }
+        }
     val totalFarms = farms.size
     val criticalFarms = farmMetrics.count { it.second.status == "بحرانی" }
     val warningFarms = farmMetrics.count { it.second.status == "هشدار" }
@@ -498,7 +512,7 @@ fun FarmOverviewCard(farm: Farm, metrics: FarmMetrics) {
                     )
                 }
 
-                // Farm Details
+                // Farm Details (Removed irrigation hectares display as requested)
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
                         text = farm.name,
@@ -507,7 +521,7 @@ fun FarmOverviewCard(farm: Farm, metrics: FarmMetrics) {
                         color = Color.White
                     )
                     Text(
-                        text = "هکتار آبیاری: ${farm.area} هکتار",
+                        text = "شناسه مزرعه: #${farm.id}",
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.LightGray
                     )
@@ -607,7 +621,39 @@ fun FarmsManagementView(
     var inCpe by remember { mutableStateOf("") }
     var inLastIrrigation by remember { mutableStateOf("") }
 
+    var searchQuery by remember { mutableStateOf("") }
+    var showLastIrrigationDatePicker by remember { mutableStateOf(false) }
+
+    if (showLastIrrigationDatePicker) {
+        JalaliWheelDatePickerDialog(
+            initialDate = if (inLastIrrigation.isNotEmpty()) inLastIrrigation else JalaliCalendarHelper.getTodayJalali(),
+            onDismissRequest = { showLastIrrigationDatePicker = false },
+            onDateConfirmed = { date ->
+                inLastIrrigation = date
+                showLastIrrigationDatePicker = false
+            }
+        )
+    }
+
     val focusManager = LocalFocusManager.current
+
+    val filteredAndSortedFarms = remember(farms, searchQuery) {
+        farms.filter { farm ->
+            searchQuery.isEmpty() ||
+                farm.name.contains(searchQuery, ignoreCase = true) ||
+                farm.id.toString() == searchQuery.trim() ||
+                "#${farm.id}" == searchQuery.trim()
+        }.sortedByDescending { farm ->
+            val metrics = viewModel.calculateMetrics(farm)
+            when (metrics.status) {
+                "بحرانی" -> 4
+                "هشدار" -> 3
+                "ایمن" -> 2
+                "بدون هدف" -> 1
+                else -> 0
+            }
+        }
+    }
 
     // Helper to clear form
     fun clearForm() {
@@ -744,29 +790,40 @@ fun FarmsManagementView(
                             }
                         )
 
-                        // Last Irrigation date string
-                        OutlinedTextField(
-                            value = inLastIrrigation,
-                            onValueChange = { inLastIrrigation = it },
+                        // Last Irrigation date string (Read-only + Touch triggering rotational wheel picker)
+                        Box(
                             modifier = Modifier
                                 .weight(1.3f)
-                                .testTag("farm_last_irrigation_input"),
-                            textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, textAlign = TextAlign.Center),
-                            placeholder = { Text("تاریخ آخرین آبیاری", color = Color.Gray, fontSize = 11.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = Color.White,
-                                focusedBorderColor = leafGreen,
-                                unfocusedBorderColor = Color.DarkGray
-                            ),
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Default.CalendarToday,
-                                    contentDescription = "Date icon",
-                                    tint = leafGreen,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                        )
+                                .clickable { showLastIrrigationDatePicker = true }
+                        ) {
+                            OutlinedTextField(
+                                value = inLastIrrigation,
+                                onValueChange = { },
+                                readOnly = true,
+                                enabled = false, // Prevents keyboard focus
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("farm_last_irrigation_input"),
+                                textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, textAlign = TextAlign.Center),
+                                placeholder = { Text("تاریخ آخرین آبیاری", color = Color.Gray, fontSize = 11.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedTextColor = Color.White,
+                                    focusedBorderColor = leafGreen,
+                                    unfocusedBorderColor = Color.DarkGray,
+                                    disabledTextColor = Color.White,
+                                    disabledBorderColor = Color.DarkGray,
+                                    disabledPlaceholderColor = Color.Gray
+                                ),
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Default.CalendarToday,
+                                        contentDescription = "Date icon",
+                                        tint = leafGreen,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            )
+                        }
                     }
 
                     // Control Buttons Block (Save / Restart / Delete / Reset Form)
@@ -892,6 +949,56 @@ fun FarmsManagementView(
             }
         }
 
+        // Search bar
+        item {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("farm_search_input"),
+                textStyle = androidx.compose.ui.text.TextStyle(
+                    color = Color.White,
+                    textAlign = TextAlign.Right,
+                    textDirection = TextDirection.ContentOrRtl
+                ),
+                placeholder = {
+                    Text(
+                        text = "جستجوی مزرعه (نام یا کد شناسه مزرعه)",
+                        color = Color.Gray,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Right
+                    )
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "Search Icon",
+                        tint = leafGreen,
+                        modifier = Modifier.size(20.dp)
+                    )
+                },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { searchQuery = "" }) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Clear search",
+                                tint = Color.LightGray,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Color.White,
+                    focusedBorderColor = leafGreen,
+                    unfocusedBorderColor = Color.DarkGray
+                ),
+                shape = RoundedCornerShape(12.dp)
+            )
+        }
+
         // Section Title: Farm Directory Selection Scroll List
         item {
             Text(
@@ -904,7 +1011,7 @@ fun FarmsManagementView(
             )
         }
 
-        if (farms.isEmpty()) {
+        if (filteredAndSortedFarms.isEmpty()) {
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -922,7 +1029,7 @@ fun FarmsManagementView(
                 }
             }
         } else {
-            items(farms) { farm ->
+            items(filteredAndSortedFarms) { farm ->
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -972,7 +1079,7 @@ fun FarmsManagementView(
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = "آبیاری: ${farm.area} هکتار  |  هدف: ${farm.target_cpe} میلی‌متر  |  تاریخ: ${farm.last_irrigation}",
+                                text = "کد مزرعه: #${farm.id}  |  هدف: ${farm.target_cpe} میلی‌متر  |  تاریخ: ${farm.last_irrigation}",
                                 color = Color.LightGray,
                                 fontSize = 11.sp
                             )
@@ -997,6 +1104,18 @@ fun EvaporationManagementView(
     var editingId by remember { mutableStateOf(0) }
     var inDate by remember { mutableStateOf("") }
     var inEvap by remember { mutableStateOf("") }
+    var showEvapDatePicker by remember { mutableStateOf(false) }
+
+    if (showEvapDatePicker) {
+        JalaliWheelDatePickerDialog(
+            initialDate = if (inDate.isNotEmpty()) inDate else JalaliCalendarHelper.getTodayJalali(),
+            onDismissRequest = { showEvapDatePicker = false },
+            onDateConfirmed = { date ->
+                inDate = date
+                showEvapDatePicker = false
+            }
+        )
+    }
 
     val focusManager = LocalFocusManager.current
 
@@ -1039,21 +1158,32 @@ fun EvaporationManagementView(
                         color = Color.White
                     )
 
-                    // Jalali Day Input Date
-                    OutlinedTextField(
-                        value = inDate,
-                        onValueChange = { inDate = it },
+                    // Jalali Day Input Date (Read-only + Touch triggering rotational wheel picker)
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .testTag("evap_date_input"),
-                        textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, textAlign = TextAlign.Center),
-                        label = { Text("تاریخ ثبت تبخیر آب (مثال: YYYY/MM/DD)", color = Color.LightGray, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Right) },
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = Color.White,
-                            focusedBorderColor = leafGreen,
-                            unfocusedBorderColor = Color.DarkGray
+                            .clickable { showEvapDatePicker = true }
+                    ) {
+                        OutlinedTextField(
+                            value = inDate,
+                            onValueChange = { },
+                            readOnly = true,
+                            enabled = false, // Prevents keyboard focus
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("evap_date_input"),
+                            textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, textAlign = TextAlign.Center),
+                            label = { Text("تاریخ ثبت تبخیر آب", color = Color.LightGray, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Right) },
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = Color.White,
+                                focusedBorderColor = leafGreen,
+                                unfocusedBorderColor = Color.DarkGray,
+                                disabledTextColor = Color.White,
+                                disabledBorderColor = Color.DarkGray,
+                                disabledLabelColor = Color.LightGray
+                            )
                         )
-                    )
+                    }
 
                     // Evaporation amount float
                     OutlinedTextField(
@@ -1226,6 +1356,188 @@ fun EvaporationManagementView(
                                 fontSize = 14.sp
                             )
                         }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ==================== WHEEL DATE PICKER COMPONENTS ====================
+@Composable
+fun JalaliWheelDatePickerDialog(
+    initialDate: String,
+    onDismissRequest: () -> Unit,
+    onDateConfirmed: (String) -> Unit
+) {
+    // Parse initial date (e.g., 1403/03/24)
+    val parts = initialDate.split("/")
+    val initialYear = parts.getOrNull(0)?.toIntOrNull() ?: 1403
+    val initialMonth = parts.getOrNull(1)?.toIntOrNull() ?: 1
+    val initialDay = parts.getOrNull(2)?.toIntOrNull() ?: 1
+
+    val years = (1400..1410).map { it.toString() }
+    val months = (1..12).map { String.format(Locale.US, "%02d", it) }
+    val monthNames = listOf(
+        "فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور",
+        "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"
+    )
+    val days = (1..31).map { String.format(Locale.US, "%02d", it) }
+
+    var selectedYear by remember { mutableStateOf(initialYear.toString()) }
+    var selectedMonthIndex by remember { mutableStateOf((initialMonth - 1).coerceIn(0, 11)) }
+    var selectedDay by remember { mutableStateOf(String.format(Locale.US, "%02d", initialDay)) }
+
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val formattedMonth = String.format(Locale.US, "%02d", selectedMonthIndex + 1)
+                    onDateConfirmed("$selectedYear/$formattedMonth/$selectedDay")
+                }
+            ) {
+                Text("تایید", color = Color(0xFF66BB6A), fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismissRequest) {
+                Text("انصراف", color = Color.LightGray)
+            }
+        },
+        containerColor = Color(0xFF142622),
+        title = {
+            Text(
+                text = "انتخاب تاریخ آبیاری",
+                color = Color.White,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Right
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .background(Color(0xFF0C1916), RoundedCornerShape(12.dp))
+                        .padding(8.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    // Day Wheel Picker
+                    WheelColumnPicker(
+                        label = "روز",
+                        items = days,
+                        selectedItem = selectedDay,
+                        onItemSelected = { selectedDay = it },
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    // Month Wheel Picker
+                    WheelColumnPicker(
+                        label = "ماه",
+                        items = monthNames,
+                        selectedItem = monthNames[selectedMonthIndex],
+                        onItemSelected = { selectedMonthIndex = monthNames.indexOf(it).coerceIn(0, 11) },
+                        modifier = Modifier.weight(1.3f)
+                    )
+
+                    // Year Wheel Picker
+                    WheelColumnPicker(
+                        label = "سال",
+                        items = years,
+                        selectedItem = selectedYear,
+                        onItemSelected = { selectedYear = it },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
+    )
+}
+
+@Composable
+fun WheelColumnPicker(
+    label: String,
+    items: List<String>,
+    selectedItem: String,
+    onItemSelected: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val leafGreen = Color(0xFF66BB6A)
+    val itemHeight = 40.dp
+
+    val selectedIndex = items.indexOf(selectedItem).coerceIn(0, items.size - 1)
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = selectedIndex)
+
+    LaunchedEffect(listState.firstVisibleItemIndex) {
+        val centerIndex = listState.firstVisibleItemIndex
+        if (centerIndex in items.indices) {
+            onItemSelected(items[centerIndex])
+        }
+    }
+
+    Column(
+        modifier = modifier.fillMaxHeight(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = label,
+            color = leafGreen,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 6.dp)
+        )
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color(0xFF0F231F)),
+            contentAlignment = Alignment.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(itemHeight)
+                    .background(leafGreen.copy(alpha = 0.15f))
+                    .border(1.dp, leafGreen.copy(alpha = 0.3f), RoundedCornerShape(4.dp))
+            )
+
+            val coroutineScope = rememberCoroutineScope()
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxHeight(),
+                contentPadding = PaddingValues(vertical = itemHeight),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                items(items.size) { index ->
+                    val isSelected = items[index] == selectedItem
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(itemHeight - 8.dp)
+                            .clickable {
+                                coroutineScope.launch {
+                                    listState.animateScrollToItem(index)
+                                }
+                                onItemSelected(items[index])
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = items[index],
+                            color = if (isSelected) Color.White else Color.Gray,
+                            fontSize = if (isSelected) 15.sp else 12.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                        )
                     }
                 }
             }
