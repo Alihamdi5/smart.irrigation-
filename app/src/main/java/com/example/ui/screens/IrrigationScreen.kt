@@ -56,6 +56,7 @@ fun IrrigationScreen(
     val evaporations by viewModel.evaporations.collectAsStateWithLifecycle()
 
     var selectedTab by remember { mutableStateOf(0) } // 0: Dashboard, 1: Farms, 2: Evaporation
+    var showBackupRestoreDialog by remember { mutableStateOf(false) }
 
     // Agricultural Organic Dark Green Palette
     val deepOrganicBg = Color(0xFF0C1916) // Earth deep charcoal green
@@ -121,29 +122,51 @@ fun IrrigationScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Jalali Today Tag
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(Color(0xFF0F1B18))
-                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                        // Date Tag & Backup Button Group
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            // Backup & Restore IconButton
+                            IconButton(
+                                onClick = { showBackupRestoreDialog = true },
+                                modifier = Modifier
+                                    .size(34.dp)
+                                    .background(Color(0xFF0F1B18), RoundedCornerShape(8.dp))
+                                    .testTag("backup_restore_trigger_button")
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.CalendarToday,
-                                    contentDescription = "Today Date Icon",
+                                    imageVector = Icons.Default.SwapHorizontalCircle,
+                                    contentDescription = "Backup and Exchange Icon",
                                     tint = primaryGoldWheat,
-                                    modifier = Modifier.size(14.dp)
+                                    modifier = Modifier.size(18.dp)
                                 )
-                                Text(
-                                    text = JalaliCalendarHelper.getTodayJalali(),
-                                    color = Color.White,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
+                            }
+
+                            // Jalali Today Tag
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Color(0xFF0F1B18))
+                                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.CalendarToday,
+                                        contentDescription = "Today Date Icon",
+                                        tint = primaryGoldWheat,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Text(
+                                        text = JalaliCalendarHelper.getTodayJalali(),
+                                        color = Color.White,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
                             }
                         }
 
@@ -321,6 +344,173 @@ fun IrrigationScreen(
                     )
                 }
             }
+        }
+
+        // --- BACKUP & RESTORE DIALOG SECTION ---
+        if (showBackupRestoreDialog) {
+            var importText by remember { mutableStateOf("") }
+            val clipboardManager = androidx.compose.ui.platform.LocalClipboardManager.current
+
+            AlertDialog(
+                onDismissRequest = { showBackupRestoreDialog = false },
+                confirmButton = {
+                    TextButton(onClick = { showBackupRestoreDialog = false }) {
+                        Text("بستن", color = leafGreen, fontWeight = FontWeight.Bold)
+                    }
+                },
+                containerColor = Color(0xFF142622),
+                title = {
+                    Text(
+                        text = "پشتیبان‌گیری و انتقال اطلاعات",
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Right
+                    )
+                },
+                text = {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        horizontalAlignment = Alignment.End,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Text(
+                            text = "با استفاده از این بخش می‌توانید اطلاعات مزارع و تبخیرهای ثبت‌شده را بصورت کد متنی کپی کرده و به گوشی کاربری دیگر انتقال دهید یا نسخه پشتیبان تهیه کنید.",
+                            color = Color.LightGray,
+                            fontSize = 11.sp,
+                            textAlign = TextAlign.Right,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        // EXPORT CARDS SECTION
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFF0C1916)),
+                            border = BorderStroke(1.dp, Color(0xFF1D3C35))
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                horizontalAlignment = Alignment.End
+                            ) {
+                                Text(
+                                    text = "۱. خروجی گرفتن جهت انتقال",
+                                    color = primaryGoldWheat,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    textAlign = TextAlign.Right
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "با کلیک روی دکمه زیر، تمام اطلاعات مزارع و آمار روزانه کپی خواهد شد که می‌توانید آن را با پیام‌رسان‌ها (مثل واتساپ/ایتا) ارسال کنید.",
+                                    color = Color.Gray,
+                                    fontSize = 10.sp,
+                                    textAlign = TextAlign.Right
+                                )
+                                Spacer(modifier = Modifier.height(10.dp))
+                                Button(
+                                    onClick = {
+                                        viewModel.exportDataToJson { msg, jsonStr ->
+                                            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                                            if (jsonStr != null) {
+                                                clipboardManager.setText(androidx.compose.ui.text.AnnotatedString(jsonStr))
+                                            }
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = leafGreen),
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(Icons.Default.ContentCopy, contentDescription = "Copy Icon", tint = Color.Black, modifier = Modifier.size(16.dp))
+                                        Text("ساخت و کپی کد پشتیبان", color = Color.Black, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                        }
+
+                        // IMPORT CARDS SECTION
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFF0C1916)),
+                            border = BorderStroke(1.dp, Color(0xFF1D3C35))
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                horizontalAlignment = Alignment.End
+                            ) {
+                                Text(
+                                    text = "۲. وارد کردن اطلاعات دریافتی",
+                                    color = primaryGoldWheat,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    textAlign = TextAlign.Right
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "کد دریافتی از کاربر دیگر را در کادر زیر قرار داده و دکمه بازخوانی را بزنید تا اطلاعات مزارع به برنامه شما منتقل شود:",
+                                    color = Color.Gray,
+                                    fontSize = 10.sp,
+                                    textAlign = TextAlign.Right
+                                )
+                                Spacer(modifier = Modifier.height(10.dp))
+                                
+                                OutlinedTextField(
+                                    value = importText,
+                                    onValueChange = { importText = it },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(80.dp)
+                                        .testTag("backup_import_textarea"),
+                                    textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 11.sp, textAlign = TextAlign.Left),
+                                    placeholder = {
+                                        Text("کد پشتیبان کپی شده را اینجا پیست کنید...", color = Color.DarkGray, fontSize = 11.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Right)
+                                    },
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedTextColor = Color.White,
+                                        focusedBorderColor = leafGreen,
+                                        unfocusedBorderColor = Color.DarkGray
+                                    )
+                                )
+                                
+                                Spacer(modifier = Modifier.height(10.dp))
+
+                                Button(
+                                    onClick = {
+                                        viewModel.importDataFromJson(importText) { msg ->
+                                            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                                            if (msg.contains("موفقیت")) {
+                                                importText = ""
+                                                showBackupRestoreDialog = false
+                                            }
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = hydrationBlue),
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(Icons.Default.Download, contentDescription = "Import Icon", tint = Color.Black, modifier = Modifier.size(16.dp))
+                                        Text("بازخوانی و جای‌گذاری اطلاعات", color = Color.Black, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            )
         }
     }
 }

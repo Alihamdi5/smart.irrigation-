@@ -203,6 +203,111 @@ class IrrigationViewModel(private val repository: IrrigationRepository) : ViewMo
             onComplete("رکورد تبخیر آب حذف شد.")
         }
     }
+
+    // --- SUPPORT FOR BACKUP & EXCHANGE (Export/Import JSON) ---
+    fun exportDataToJson(onComplete: (String, String?) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val allFarmsList = farms.value
+                val allEvapList = repository.getEvaporationsSync()
+
+                val root = org.json.JSONObject()
+                
+                val farmsArray = org.json.JSONArray()
+                for (f in allFarmsList) {
+                    val fObj = org.json.JSONObject()
+                    fObj.put("id", f.id)
+                    fObj.put("name", f.name)
+                    fObj.put("area", f.area)
+                    fObj.put("target_cpe", f.target_cpe)
+                    fObj.put("last_irrigation", f.last_irrigation)
+                    farmsArray.put(fObj)
+                }
+                root.put("farms", farmsArray)
+
+                val evapArray = org.json.JSONArray()
+                for (e in allEvapList) {
+                    val eObj = org.json.JSONObject()
+                    eObj.put("id", e.id)
+                    eObj.put("date", e.date)
+                    eObj.put("evap", e.evap)
+                    evapArray.put(eObj)
+                }
+                root.put("evaporation", evapArray)
+
+                val backupString = root.toString(4)
+                onComplete("کد پشتیبان‌گیری مزارع و تبخیر با موفقیت ساخته شد.", backupString)
+            } catch (e: Exception) {
+                onComplete("خطا در پشتیبان‌گیری: ${e.message}", null)
+            }
+        }
+    }
+
+    fun importDataFromJson(jsonStr: String, onComplete: (String) -> Unit) {
+        val trimmed = jsonStr.trim()
+        if (trimmed.isEmpty()) {
+            onComplete("متن یا کد پشتیبان خالی است.")
+            return
+        }
+        viewModelScope.launch {
+            try {
+                val root = org.json.JSONObject(trimmed)
+                var farmsCount = 0
+                var evapsCount = 0
+
+                if (root.has("farms")) {
+                    val farmsArray = root.getJSONArray("farms")
+                    for (i in 0 until farmsArray.length()) {
+                        val fObj = farmsArray.getJSONObject(i)
+                        val idVal = fObj.optInt("id", 0)
+                        val farmName = fObj.optString("name", "")
+                        val farmArea = fObj.optDouble("area", 12.0)
+                        val farmTargetCpe = fObj.optDouble("target_cpe", 0.0)
+                        val farmLastIrrig = fObj.optString("last_irrigation", "")
+
+                        if (farmName.isNotEmpty()) {
+                            // Using standard replace inside Dao
+                            repository.insertFarm(
+                                Farm(
+                                    id = if (idVal > 0) idVal else 0,
+                                    name = farmName,
+                                    area = farmArea,
+                                    target_cpe = farmTargetCpe,
+                                    last_irrigation = farmLastIrrig
+                                )
+                            )
+                            farmsCount++
+                        }
+                    }
+                }
+
+                if (root.has("evaporation")) {
+                    val evapArray = root.getJSONArray("evaporation")
+                    for (i in 0 until evapArray.length()) {
+                        val eObj = evapArray.getJSONObject(i)
+                        val idVal = eObj.optInt("id", 0)
+                        val eDate = eObj.optString("date", "")
+                        val eEvap = eObj.optDouble("evap", 0.0)
+
+                        if (eDate.isNotEmpty()) {
+                            repository.insertEvaporation(
+                                Evaporation(
+                                    id = if (idVal > 0) idVal else 0,
+                                    date = eDate,
+                                    evap = eEvap
+                                )
+                            )
+                            evapsCount++
+                        }
+                    }
+                }
+
+                onComplete("انتقال با موفقیت انجام شد: $farmsCount مزرعه و $evapsCount رکورد تبخیر بارگذاری شد.")
+            } catch (e: Exception) {
+                onComplete("خطا در بازخوانی کد پشتیبان: فرمت کد نامعتبر است.")
+            }
+        }
+    }
 }
 
 class IrrigationViewModelFactory(private val repository: IrrigationRepository) : ViewModelProvider.Factory {
